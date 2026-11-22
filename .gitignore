@@ -1,0 +1,14 @@
+# Sensitive credentials
+.env
+.env.*
+
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local security logs
+logs/
+*.log
