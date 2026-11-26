@@ -34,7 +34,6 @@ def detect_threat(url):
             for label in unicode_domain.split(".")
         )
 
-     
         homoglyph = (
             not unicode_domain.isascii()
             and bool(
@@ -44,7 +43,6 @@ def detect_threat(url):
                 )
             )
         )
-
 
         brand = detect_brand(unicode_domain)
 
@@ -80,17 +78,22 @@ def detect_threat(url):
         else:
             risk = "LOW"
 
-        print("\nTimestamp:", datetime.now(timezone.utc).isoformat())
-        print("Domain:", ascii_domain)
-        print("Decoded Domain:", unicode_domain)
-        print("Risk Score:", f"{risk_score}/100")
-        print("Risk Level:", risk)
-        print("Targeted Brand:", brand.upper() if brand else "None detected")
+        # Quiet mode: display only suspicious domains
+        if risk_score >= 30:
+            print("\n" + "=" * 60)
+            print("[SUSPICIOUS DOMAIN DETECTED]")
+            print("Timestamp:", datetime.now(timezone.utc).isoformat())
+            print("Domain:", ascii_domain)
+            print("Decoded Domain:", unicode_domain)
+            print("Risk Score:", f"{risk_score}/100")
+            print("Risk Level:", risk)
+            print(
+                "Targeted Brand:",
+                brand.upper() if brand else "None detected"
+            )
 
-        for finding in findings:
-            print("[DETECTION]", finding)
-       
-        
+            for finding in findings:
+                print("[DETECTION]", finding)
 
         # Log and notify on high-risk detections
         if risk_score >= 50:
@@ -111,14 +114,18 @@ def detect_threat(url):
                     risk_score=risk_score
                 )
             except Exception as error:
-                print("[WARNING] Desktop notification failed:", error)
+                print(
+                    "[WARNING] Desktop notification failed:",
+                    error
+                )
 
-        # Threat intelligence lookup
-        print("\n[THREAT INTELLIGENCE]")
+        # Threat intelligence integration
         intelligence = check_domain(ascii_domain)
 
-        for key, value in intelligence.items():
-            print(f"{key}: {value}")
+        if risk_score >= 30:
+            print("\n[THREAT INTELLIGENCE]")
+            for key, value in intelligence.items():
+                print(f"{key}: {value}")
 
     except (ValueError, UnicodeError) as error:
         print("[ERROR]", error)
@@ -143,5 +150,3 @@ if __name__ == "__main__":
 
     for domain in test_domains:
         detect_threat(domain)
-        print("-" * 60)
-        

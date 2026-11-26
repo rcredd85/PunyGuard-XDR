@@ -10,9 +10,46 @@ import time
 
 seen_domains = {}
 
+# PunyGuard XDR - Monitoring Heartbeat
+import json
+from pathlib import Path
+
+STATUS_FILE = Path(__file__).resolve().parent / "logs" / "monitor_status.json"
+
+dns_packet_count = 0
+last_dns_request = None
+
+
+def save_monitor_status():
+    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    status = {
+        "monitor": "PunyGuard XDR",
+        "status": "running",
+        "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+        "dns_packets_captured": dns_packet_count,
+        "last_dns_request": last_dns_request
+    }
+
+    temporary_file = STATUS_FILE.with_suffix(".tmp")
+    temporary_file.write_text(
+        json.dumps(status, indent=4),
+        encoding="utf-8"
+    )
+    temporary_file.replace(STATUS_FILE)
 
 
 def monitor_dns(packet):
+
+    global dns_packet_count, last_dns_request
+
+    if packet.haslayer(DNS) and packet[DNS].qr == 0:
+        dns_packet_count += 1
+        last_dns_request = datetime.now(timezone.utc).isoformat()
+
+        if dns_packet_count == 1 or dns_packet_count % 10 == 0:
+            save_monitor_status()
+
     if not packet.haslayer(DNS):
         return
 
@@ -34,11 +71,6 @@ def monitor_dns(packet):
         return
 
     seen_domains[domain] = now
-
-    print("\n" + "=" * 60)
-    print("[LIVE DNS REQUEST]")
-    print("Timestamp:", datetime.now(timezone.utc).isoformat())
-    print("Requested Domain:", domain)
 
     # Disable external API calls during initial testing
     with patch(
